@@ -12,16 +12,16 @@ class Producto {
         this.categoria = categoria;
         this.precio = precio;
 
-        // Si no me definen stock, pongo 10 por default
-        if (stock) {
+        /* Si no me definen stock, pongo 10 por dafault la cambio
+        a una sola línea operador de coalescencia nula (nullish coalescing operator) 
+        if (stock){
             this.stock = stock;
-        } else {
-            this.stock = 10;
-        }
+        }else {
+        this.stock =10
+        }*/
+        this.stock = stock || 10;
     }
-
 }
-
 
 // Creo todos los productos que vende mi super
 const queso = new Producto('KS944RUR', 'Queso', 10, 'lacteos', 4);
@@ -36,14 +36,13 @@ const jabon = new Producto('WE328NJ', 'Jabon', 4, 'higiene', 3);
 // Genero un listado de productos. Simulando base de datos
 const productosDelSuper = [queso, gaseosa, cerveza, arroz, fideos, lavandina, shampoo, jabon];
 
-
 // Cada cliente que venga a mi super va a crear un carrito
 class Carrito {
     productos;      // Lista de productos agregados
     categorias;     // Lista de las diferentes categorías de los productos en el carrito
     precioTotal;    // Lo que voy a pagar al finalizar mi compra
 
-    // Al crear un carrito, empieza vació
+    // Al crear un carrito, empieza vacío
     constructor() {
         this.precioTotal = 0;
         this.productos = [];
@@ -51,11 +50,15 @@ class Carrito {
     }
 
     /**
-     * función que agrega @{cantidad} de productos con @{sku} al carrito
+     * Función que agrega @{cantidad} de productos con @{sku} al carrito
      */
-    async agregarProducto(sku, cantidad) {
-        console.log(`Agregando ${cantidad} ${sku}`);
+    /**
+ * función que agrega @{cantidad} de productos con @{sku} al carrito
+ */
+async agregarProducto(sku, cantidad) {
+    console.log(`Agregando ${cantidad} ${sku}`);
 
+    try {
         // Busco el producto en la "base de datos"
         const producto = await findProductBySku(sku);
 
@@ -65,7 +68,41 @@ class Carrito {
         const nuevoProducto = new ProductoEnCarrito(sku, producto.nombre, cantidad);
         this.productos.push(nuevoProducto);
         this.precioTotal = this.precioTotal + (producto.precio * cantidad);
-        this.categorias.push(producto.categoria);
+
+        // Actualizar la lista de categorías solo si la categoría no estaba en la lista
+        if (!this.categorias.includes(producto.categoria)) {
+            this.categorias.push(producto.categoria);
+        }
+    } catch (error) {
+        console.log(error); // Mostrar mensaje de error si el producto no existe
+    }
+}
+
+    /**
+     * Función que elimina @{cantidad} de productos con @{sku} del carrito
+     */
+    eliminarProducto(sku, cantidad) {
+        console.log(`Eliminando ${cantidad} ${sku}`);
+
+        return new Promise((resolve, reject) => {
+            const productoExistente = this.productos.find(prod => prod.sku === sku);
+
+            if (!productoExistente) {
+                reject(`El producto ${sku} no existe en el carrito.`);
+                return;
+            }
+
+            if (cantidad < productoExistente.cantidad) {
+                // Si la cantidad es menor a la cantidad del producto en el carrito, restar esa cantidad
+                productoExistente.cantidad -= cantidad;
+                resolve();
+            } else {
+                // Si la cantidad es mayor o igual a la cantidad del producto en el carrito, eliminar el producto
+                const index = this.productos.indexOf(productoExistente);
+                this.productos.splice(index, 1);
+                resolve();
+            }
+        });
     }
 }
 
@@ -80,7 +117,6 @@ class ProductoEnCarrito {
         this.nombre = nombre;
         this.cantidad = cantidad;
     }
-
 }
 
 // Función que busca un producto por su sku en "la base de datos"
@@ -98,8 +134,23 @@ function findProductBySku(sku) {
 }
 
 const carrito = new Carrito();
-carrito.agregarProducto('WE328NJ', 2);
-carrito.agregarProducto('WE328NJ', 2);
-carrito.agregarProducto('WE328NJ', 2);
-carrito.agregarProducto('WE328NJ', 1);
-carrito.agregarProducto('KS944RUR', 3);
+
+carrito.agregarProducto('WE328NJ', 2)
+    .then(() => carrito.agregarProducto('WE328NJ', 2))
+    .then(() => carrito.agregarProducto('WE328NJ', 2))
+    .then(() => carrito.agregarProducto('WE328NJ', 1))
+    .then(() => carrito.agregarProducto('KS944RUR', 3))
+    .then(() => {
+        console.log(carrito.productos);
+        console.log(carrito.categorias);
+        console.log(carrito.precioTotal);
+    })
+    .catch(error => console.log(error));
+
+carrito.eliminarProducto('WE328NJ', 1)
+    .then(() => {
+        console.log(carrito.productos);
+        console.log(carrito.categorias);
+        console.log(carrito.precioTotal);
+    })
+    .catch(error => console.log(error));
